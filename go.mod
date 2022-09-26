@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	cloud.google.com/go/storage v1.26.0
-	github.com/fsouza/fake-gcs-server v1.40.1
+	github.com/fsouza/fake-gcs-server v1.40.2
 	github.com/in-toto/in-toto-golang v0.3.4-0.20211211042327-af1f9fb822bf
 	github.com/neo4j/neo4j-go-driver/v4 v4.4.4
 	github.com/secure-systems-lab/go-securesystemslib v0.4.0
@@ -29,7 +29,7 @@ require (
 	github.com/gorilla/handlers v1.5.1 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/pkg/xattr v0.4.8 // indirect
+	github.com/pkg/xattr v0.4.9 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.opencensus.io v0.23.0 // indirect
@@ -56,7 +56,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.13.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
-	github.com/spdx/tools-golang v0.3.1-0.20220818163346-5eb9315c0c55 // indirect
 	github.com/theupdateframework/go-tuf v0.5.0 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	go.uber.org/goleak v1.1.12 // indirect
@@ -65,4 +64,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-require github.com/sigstore/sigstore v1.4.1
+require (
+	github.com/sigstore/sigstore v1.4.1
+	github.com/spdx/tools-golang v0.3.1-0.20220818163346-5eb9315c0c55
+)
