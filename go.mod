@@ -11,7 +11,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.5.0
 	go.uber.org/zap v1.23.0
-	google.golang.org/api v0.96.0
+	google.golang.org/api v0.98.0
 )
 
 require (
@@ -56,7 +56,6 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.13.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
-	github.com/spdx/tools-golang v0.3.1-0.20220818163346-5eb9315c0c55 // indirect
 	github.com/theupdateframework/go-tuf v0.5.0 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	go.uber.org/goleak v1.1.12 // indirect
@@ -65,4 +64,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-require github.com/sigstore/sigstore v1.4.1
+require (
+	github.com/sigstore/sigstore v1.4.1
+	github.com/spdx/tools-golang v0.3.1-0.20220818163346-5eb9315c0c55
+)
