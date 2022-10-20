@@ -15,10 +15,14 @@
 
 package assembler
 
+import "strings"
+
 // ArtifactNode is a node that represents an artifact
 type ArtifactNode struct {
-	Name   string
-	Digest string
+	Name     string
+	Digest   string
+	Tags     []string
+	NodeData objectMetadata
 }
 
 func (an ArtifactNode) Type() string {
@@ -28,17 +32,58 @@ func (an ArtifactNode) Type() string {
 func (an ArtifactNode) Properties() map[string]interface{} {
 	properties := make(map[string]interface{})
 	properties["name"] = an.Name
-	properties["digest"] = an.Digest
+	properties["digest"] = strings.ToLower(an.Digest)
+	properties["tags"] = an.Tags
+	an.NodeData.addProperties(properties)
 	return properties
 }
 
 func (an ArtifactNode) PropertyNames() []string {
-	return []string{"name", "digest"}
+	fields := []string{"name", "digest", "tags"}
+	fields = append(fields, an.NodeData.getProperties()...)
+	return fields
 }
 
 func (an ArtifactNode) IdentifiablePropertyNames() []string {
 	// An artifact can be uniquely identified by digest
 	return []string{"digest"}
+}
+
+// PackageNode is a node that represents an artifact
+type PackageNode struct {
+	Name     string
+	Digest   []string
+	Version  string
+	Purl     string
+	CPEs     []string
+	Tags     []string
+	NodeData objectMetadata
+}
+
+func (pn PackageNode) Type() string {
+	return "Package"
+}
+
+func (pn PackageNode) Properties() map[string]interface{} {
+	properties := make(map[string]interface{})
+	properties["name"] = pn.Name
+	properties["purl"] = pn.Purl
+	properties["version"] = pn.Version
+	properties["cpes"] = pn.CPEs
+	properties["digest"] = toLower(pn.Digest...)
+	properties["tags"] = pn.Tags
+	pn.NodeData.addProperties(properties)
+	return properties
+}
+
+func (pn PackageNode) PropertyNames() []string {
+	fields := []string{"name", "digest", "purl", "cpes", "tags", "version"}
+	fields = append(fields, pn.NodeData.getProperties()...)
+	return fields
+}
+
+func (pn PackageNode) IdentifiablePropertyNames() []string {
+	return []string{"purl"}
 }
 
 // IdentityNode is a node that represents an identity
@@ -49,6 +94,7 @@ type IdentityNode struct {
 	Key       string
 	KeyType   string
 	KeyScheme string
+	NodeData  objectMetadata
 }
 
 func (in IdentityNode) Type() string {
@@ -58,15 +104,18 @@ func (in IdentityNode) Type() string {
 func (in IdentityNode) Properties() map[string]interface{} {
 	properties := make(map[string]interface{})
 	properties["id"] = in.ID
-	properties["digest"] = in.Digest
+	properties["digest"] = strings.ToLower(in.Digest)
 	properties["key"] = in.Key
 	properties["keyType"] = in.KeyType
 	properties["keyScheme"] = in.KeyScheme
+	in.NodeData.addProperties(properties)
 	return properties
 }
 
 func (in IdentityNode) PropertyNames() []string {
-	return []string{"id", "digest", "key", "keyType", "keyScheme"}
+	fields := []string{"id", "digest", "key", "keyType", "keyScheme"}
+	fields = append(fields, in.NodeData.getProperties()...)
+	return fields
 }
 
 func (in IdentityNode) IdentifiablePropertyNames() []string {
@@ -79,6 +128,7 @@ type AttestationNode struct {
 	// TODO(mihaimaruseac): Unsure what fields to store here
 	FilePath string
 	Digest   string
+	NodeData objectMetadata
 }
 
 func (an AttestationNode) Type() string {
@@ -88,12 +138,15 @@ func (an AttestationNode) Type() string {
 func (an AttestationNode) Properties() map[string]interface{} {
 	properties := make(map[string]interface{})
 	properties["filepath"] = an.FilePath
-	properties["digest"] = an.Digest
+	properties["digest"] = strings.ToLower(an.Digest)
+	an.NodeData.addProperties(properties)
 	return properties
 }
 
 func (an AttestationNode) PropertyNames() []string {
-	return []string{"filepath", "digest"}
+	fields := []string{"filepath", "digest"}
+	fields = append(fields, an.NodeData.getProperties()...)
+	return fields
 }
 
 func (an AttestationNode) IdentifiablePropertyNames() []string {
@@ -104,6 +157,7 @@ func (an AttestationNode) IdentifiablePropertyNames() []string {
 type BuilderNode struct {
 	BuilderType string
 	BuilderId   string
+	NodeData    objectMetadata
 }
 
 func (bn BuilderNode) Type() string {
@@ -114,16 +168,55 @@ func (bn BuilderNode) Properties() map[string]interface{} {
 	properties := make(map[string]interface{})
 	properties["type"] = bn.BuilderType
 	properties["id"] = bn.BuilderId
+	bn.NodeData.addProperties(properties)
 	return properties
 }
 
 func (bn BuilderNode) PropertyNames() []string {
-	return []string{"type", "id"}
+	fields := []string{"type", "id"}
+	fields = append(fields, bn.NodeData.getProperties()...)
+	return fields
 }
 
 func (bn BuilderNode) IdentifiablePropertyNames() []string {
 	// A builder needs both type and id to be identified
 	return []string{"type", "id"}
+}
+
+// MetadataNode is a node that represents metadata about an artifact/package
+type MetadataNode struct {
+	MetadataType string
+	ID           string
+	Details      map[string]interface{}
+}
+
+func (mn MetadataNode) Type() string {
+	return "Metadata"
+}
+
+func (mn MetadataNode) Properties() map[string]interface{} {
+	properties := make(map[string]interface{})
+	properties["metadata_type"] = mn.MetadataType
+	properties["id"] = mn.ID
+
+	for k, v := range mn.Details {
+		properties[k] = v
+	}
+
+	return properties
+}
+
+func (mn MetadataNode) PropertyNames() []string {
+	fields := []string{"metadata_type", "id"}
+	for k := range mn.Details {
+		fields = append(fields, k)
+	}
+
+	return fields
+}
+
+func (mn MetadataNode) IdentifiablePropertyNames() []string {
+	return []string{"metadata_type", "id"}
 }
 
 // IdentityForEdge is an edge that represents the fact that an
@@ -208,10 +301,13 @@ func (e BuiltByEdge) IdentifiablePropertyNames() []string {
 }
 
 // DependsOnEdge is an edge that represents the fact that an
-// `ArtifactNode` depends on another `ArtifactNode`
+// `ArtifactNode/PackageNode` depends on another `ArtifactNode/PackageNode`
+// Only one of each side of the edge should be defined.
 type DependsOnEdge struct {
-	ArtifactNode ArtifactNode
-	Dependency   ArtifactNode
+	ArtifactNode       ArtifactNode
+	PackageNode        PackageNode
+	ArtifactDependency ArtifactNode
+	PackageDependency  PackageNode
 }
 
 func (e DependsOnEdge) Type() string {
@@ -219,7 +315,29 @@ func (e DependsOnEdge) Type() string {
 }
 
 func (e DependsOnEdge) Nodes() (v, u GuacNode) {
-	return e.ArtifactNode, e.Dependency
+	vA, vP := isDefined(e.ArtifactNode), isDefined(e.PackageNode)
+	uA, uP := isDefined(e.ArtifactDependency), isDefined(e.PackageDependency)
+	if vA == vP {
+		panic("only one of package and artifact node defined for DependsOn relationship")
+	}
+
+	if uA == uP {
+		panic("only one of package and artifact dependency node defined for DependsOn relationship")
+	}
+
+	if vA {
+		v = e.ArtifactNode
+	} else {
+		v = e.PackageNode
+	}
+
+	if uA {
+		u = e.ArtifactDependency
+	} else {
+		u = e.PackageDependency
+	}
+
+	return v, u
 }
 
 func (e DependsOnEdge) Properties() map[string]interface{} {
@@ -231,5 +349,75 @@ func (e DependsOnEdge) PropertyNames() []string {
 }
 
 func (e DependsOnEdge) IdentifiablePropertyNames() []string {
+	return []string{}
+}
+
+// Contains is an edge that represents the fact that an
+// `PackageNode` contains a `ArtifactNode`
+type ContainsEdge struct {
+	PackageNode       PackageNode
+	ContainedArtifact ArtifactNode
+}
+
+func (e ContainsEdge) Type() string {
+	return "Contains"
+}
+
+func (e ContainsEdge) Nodes() (v, u GuacNode) {
+	return e.PackageNode, e.ContainedArtifact
+}
+
+func (e ContainsEdge) Properties() map[string]interface{} {
+	return map[string]interface{}{}
+}
+
+func (e ContainsEdge) PropertyNames() []string {
+	return []string{}
+}
+
+func (e ContainsEdge) IdentifiablePropertyNames() []string {
+	return []string{}
+}
+
+// MetadataFor is an edge that represents the fact that an
+// a metadata node represents metadata for an `ArtifactNode/PackageNode`
+// Only one of each side of the edge should be defined.
+type MetadataForEdge struct {
+	// From node
+	MetadataNode MetadataNode
+	// To node
+	ForArtifact ArtifactNode
+	ForPackage  PackageNode
+}
+
+func (e MetadataForEdge) Type() string {
+	return "MetadataFor"
+}
+
+func (e MetadataForEdge) Nodes() (v, u GuacNode) {
+	uA, uP := isDefined(e.ForArtifact), isDefined(e.ForPackage)
+	if uA == uP {
+		panic("only one of package and artifact dependency node defined for DependsOn relationship")
+	}
+
+	v = e.MetadataNode
+	if uA {
+		u = e.ForArtifact
+	} else {
+		u = e.ForPackage
+	}
+
+	return v, u
+}
+
+func (e MetadataForEdge) Properties() map[string]interface{} {
+	return map[string]interface{}{}
+}
+
+func (e MetadataForEdge) PropertyNames() []string {
+	return []string{}
+}
+
+func (e MetadataForEdge) IdentifiablePropertyNames() []string {
 	return []string{}
 }

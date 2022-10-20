@@ -15,9 +15,20 @@
 
 package common
 
-import "github.com/guacsec/guac/pkg/assembler"
+import (
+	"context"
 
-type GraphBuilder interface {
-	CreateAssemblerInput([]assembler.IdentityNode) assembler.AssemblerInput
-	GetIdentities() []assembler.IdentityNode
+	"github.com/guacsec/guac/pkg/assembler"
+	"github.com/guacsec/guac/pkg/handler/processor"
+)
+
+type DocumentParser interface {
+	// Parse breaks out the document into the graph components
+	Parse(ctx context.Context, doc *processor.Document) error
+	// GetIdentities gets the identity node from the document if they exist
+	GetIdentities(ctx context.Context) []assembler.IdentityNode
+	// CreateNodes creates the GuacNode for the graph inputs
+	CreateNodes(ctx context.Context) []assembler.GuacNode
+	// CreateEdges creates the GuacEdges that form the relationship for the graph inputs
+	CreateEdges(ctx context.Context, foundIdentities []assembler.IdentityNode) []assembler.GuacEdge
 }

@@ -16,46 +16,69 @@
 package parser
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/guacsec/guac/pkg/assembler"
 	"github.com/guacsec/guac/pkg/handler/processor"
 	"github.com/guacsec/guac/pkg/ingestor/parser/common"
+	"github.com/guacsec/guac/pkg/ingestor/parser/cyclonedx"
 	"github.com/guacsec/guac/pkg/ingestor/parser/dsse"
+	"github.com/guacsec/guac/pkg/ingestor/parser/scorecard"
 	"github.com/guacsec/guac/pkg/ingestor/parser/slsa"
+	"github.com/guacsec/guac/pkg/ingestor/parser/spdx"
+)
+
+func init() {
+	_ = RegisterDocumentParser(dsse.NewDSSEParser, processor.DocumentDSSE)
+	_ = RegisterDocumentParser(slsa.NewSLSAParser, processor.DocumentITE6SLSA)
+	_ = RegisterDocumentParser(spdx.NewSpdxParser, processor.DocumentSPDX)
+	_ = RegisterDocumentParser(cyclonedx.NewCycloneDXParser, processor.DocumentCycloneDX)
+	_ = RegisterDocumentParser(scorecard.NewScorecardParser, processor.DocumentScorecard)
+}
+
+var (
+	documentParser = map[processor.DocumentType]func() common.DocumentParser{}
 )
 
 type docTreeBuilder struct {
 	identities    []assembler.IdentityNode
-	graphBuilders []common.GraphBuilder
+	graphBuilders []*common.GraphBuilder
 }
 
 func newDocTreeBuilder() *docTreeBuilder {
 	return &docTreeBuilder{
 		identities:    []assembler.IdentityNode{},
-		graphBuilders: []common.GraphBuilder{},
+		graphBuilders: []*common.GraphBuilder{},
 	}
 }
 
-// ParseDocumentTree takes the DocumentTree and create graph inputs (nodes and edges) per document node
-func ParseDocumentTree(docTree processor.DocumentTree) ([]assembler.AssemblerInput, error) {
+func RegisterDocumentParser(p func() common.DocumentParser, d processor.DocumentType) error {
+	if _, ok := documentParser[d]; ok {
+		return fmt.Errorf("the document parser is being overwritten: %s", d)
+	}
+	documentParser[d] = p
+	return nil
+}
 
+// ParseDocumentTree takes the DocumentTree and create graph inputs (nodes and edges) per document node
+func ParseDocumentTree(ctx context.Context, docTree processor.DocumentTree) ([]assembler.AssemblerInput, error) {
 	assemblerinputs := []assembler.AssemblerInput{}
 	docTreeBuilder := newDocTreeBuilder()
-	err := docTreeBuilder.parse(docTree)
+	err := docTreeBuilder.parse(ctx, docTree)
 	if err != nil {
 		return nil, err
 	}
 	for _, builder := range docTreeBuilder.graphBuilders {
-		assemblerinput := builder.CreateAssemblerInput(docTreeBuilder.identities)
+		assemblerinput := builder.CreateAssemblerInput(ctx, docTreeBuilder.identities)
 		assemblerinputs = append(assemblerinputs, assemblerinput)
 	}
 
 	return assemblerinputs, nil
 }
 
-func (t *docTreeBuilder) parse(root processor.DocumentTree) error {
-	builder, err := parseHelper(root.Document)
+func (t *docTreeBuilder) parse(ctx context.Context, root processor.DocumentTree) error {
+	builder, err := parseHelper(ctx, root.Document)
 	if err != nil {
 		return err
 	}
@@ -68,7 +91,7 @@ func (t *docTreeBuilder) parse(root processor.DocumentTree) error {
 	}
 
 	for _, c := range root.Children {
-		err := t.parse(c)
+		err := t.parse(ctx, c)
 		if err != nil {
 			return err
 		}
@@ -76,12 +99,19 @@ func (t *docTreeBuilder) parse(root processor.DocumentTree) error {
 	return nil
 }
 
-func parseHelper(doc *processor.Document) (common.GraphBuilder, error) {
-	switch doc.Type {
-	case processor.DocumentDSSE:
-		return dsse.ParseDsse(doc)
-	case processor.DocumentITE6SLSA:
-		return slsa.ParseITE6Slsa(doc)
+func parseHelper(ctx context.Context, doc *processor.Document) (*common.GraphBuilder, error) {
+	pFunc, ok := documentParser[doc.Type]
+	if !ok {
+		return nil, fmt.Errorf("no document parser registered for type: %s", doc.Type)
 	}
-	return nil, fmt.Errorf("no parser found for document type: %v", doc.Type)
+
+	p := pFunc()
+	err := p.Parse(ctx, doc)
+	if err != nil {
+		return nil, err
+	}
+
+	graphBuilder := common.NewGenericGraphBuilder(p, p.GetIdentities(ctx))
+
+	return graphBuilder, nil
 }

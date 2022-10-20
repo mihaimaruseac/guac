@@ -47,7 +47,7 @@ func StoreGraph(g Graph, client graphdb.Client) error {
 	}
 
 	edge_queries := make([]string, len(g.Edges))
-	edge_dicts := make([]map[string]interface{}, len(g.Nodes))
+	edge_dicts := make([]map[string]interface{}, len(g.Edges))
 	for i, e := range g.Edges {
 		a, b := e.Nodes()
 		var sb strings.Builder
@@ -76,7 +76,6 @@ func StoreGraph(g Graph, client graphdb.Client) error {
 	_, err := session.WriteTransaction(
 		func(tx graphdb.Transaction) (interface{}, error) {
 			for i, query := range queries {
-				fmt.Printf("%v(where: %v)\n\n", query, params[i])
 				if _, err := tx.Run(query, params[i]); err != nil {
 					return nil, err
 				}

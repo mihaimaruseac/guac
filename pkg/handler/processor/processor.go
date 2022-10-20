@@ -56,6 +56,9 @@ const (
 	DocumentITE6Unknown DocumentType = "ITE6"
 	DocumentDSSE        DocumentType = "DSSE"
 	DocumentSPDX        DocumentType = "SPDX"
+	DocumentJsonLines   DocumentType = "JSON_LINES"
+	DocumentScorecard   DocumentType = "SCORECARD"
+	DocumentCycloneDX   DocumentType = "CycloneDX"
 	DocumentUnknown     DocumentType = "UNKNOWN"
 )
 
@@ -64,8 +67,10 @@ type FormatType string
 
 // Format* is the enumerables of FormatType
 const (
-	FormatJSON    FormatType = "JSON"
-	FormatUnknown FormatType = "UNKNOWN"
+	FormatJSON      FormatType = "JSON"
+	FormatJSONLines FormatType = "JSON_LINES"
+	FormatXML       FormatType = "XML"
+	FormatUnknown   FormatType = "UNKNOWN"
 )
 
 // SourceInformation provides additional information about where the document comes from

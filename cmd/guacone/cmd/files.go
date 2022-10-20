@@ -83,7 +83,7 @@ var exampleCmd = &cobra.Command{
 			logger.Errorf("error: %v", err)
 			os.Exit(1)
 		}
-		ingestorFunc, err := getIngestor()
+		ingestorFunc, err := getIngestor(ctx)
 		if err != nil {
 			logger.Errorf("error: %v", err)
 			os.Exit(1)
@@ -94,8 +94,12 @@ var exampleCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		totalNum := 0
 		// Set emit function to go through the entire pipeline
 		emit := func(d *processor.Document) error {
+			totalNum += 1
+			start := time.Now()
+
 			docTree, err := processorFunc(d)
 			if err != nil {
 				return fmt.Errorf("unable to process doc: %v, fomat: %v, document: %v", err, d.Format, d.Type)
@@ -110,6 +114,9 @@ var exampleCmd = &cobra.Command{
 			if err != nil {
 				return fmt.Errorf("unable to assemble graphs: %v", err)
 			}
+			t := time.Now()
+			elapsed := t.Sub(start)
+			logger.Infof("[%v] completed doc %+v", elapsed, d.SourceInformation)
 			return nil
 		}
 
@@ -125,6 +132,7 @@ var exampleCmd = &cobra.Command{
 		if err := collector.Collect(ctx, emit, errHandler); err != nil {
 			logger.Fatal(err)
 		}
+		logger.Infof("completed ingesting %v documents", totalNum)
 	},
 }
 
@@ -151,9 +159,9 @@ func getProcessor(ctx context.Context) (func(*processor.Document) (processor.Doc
 		return process.Process(ctx, d)
 	}, nil
 }
-func getIngestor() (func(processor.DocumentTree) ([]assembler.Graph, error), error) {
+func getIngestor(ctx context.Context) (func(processor.DocumentTree) ([]assembler.Graph, error), error) {
 	return func(doc processor.DocumentTree) ([]assembler.Graph, error) {
-		inputs, err := parser.ParseDocumentTree(doc)
+		inputs, err := parser.ParseDocumentTree(ctx, doc)
 		if err != nil {
 			return nil, err
 		}

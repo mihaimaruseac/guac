@@ -24,6 +24,9 @@ import (
 func init() {
 	_ = RegisterDocumentTypeGuesser(&ite6TypeGuesser{}, "ite6")
 	_ = RegisterDocumentTypeGuesser(&dsseTypeGuesser{}, "dsse")
+	_ = RegisterDocumentTypeGuesser(&spdxTypeGuesser{}, "spdx")
+	_ = RegisterDocumentTypeGuesser(&scorecardTypeGuesser{}, "scorecard")
+	_ = RegisterDocumentTypeGuesser(&cycloneDXTypeGuesser{}, "cyclonedx")
 }
 
 // DocumentTypeGuesser guesses the document type based on the blob and format given
