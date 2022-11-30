@@ -19,9 +19,12 @@ package main
 // development. Do not use in production!
 
 import (
+	"github.com/pkg/profile"
+
 	"github.com/guacsec/guac/cmd/graphql_playground/cmd"
 )
 
 func main() {
+	defer profile.Start(profile.ProfilePath(".")).Stop()
 	cmd.Execute()
 }

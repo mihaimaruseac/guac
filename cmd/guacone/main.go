@@ -16,9 +16,12 @@
 package main
 
 import (
+	"github.com/pkg/profile"
+
 	"github.com/guacsec/guac/cmd/guacone/cmd"
 )
 
 func main() {
+	defer profile.Start(profile.ProfilePath(".")).Stop()
 	cmd.Execute()
 }

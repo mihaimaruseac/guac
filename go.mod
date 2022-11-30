@@ -165,6 +165,7 @@ require (
 	github.com/ossf/scorecard/v4 v4.8.0
 	github.com/package-url/packageurl-go v0.1.1-0.20220428063043-89078438f170
 	github.com/pkg/errors v0.9.1
+	github.com/pkg/profile v1.5.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/regclient/regclient v0.4.7
 	github.com/satori/go.uuid v1.2.0
