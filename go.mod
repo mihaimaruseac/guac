@@ -5,9 +5,9 @@ go 1.19
 require (
 	cloud.google.com/go/storage v1.29.0
 	github.com/fsouza/fake-gcs-server v1.44.0
-	github.com/in-toto/in-toto-golang v0.3.4-0.20220709202702-fa494aaa0add
+	github.com/in-toto/in-toto-golang v0.7.0
 	github.com/neo4j/neo4j-go-driver/v4 v4.4.5
-	github.com/secure-systems-lab/go-securesystemslib v0.4.0
+	github.com/secure-systems-lab/go-securesystemslib v0.5.0
 	github.com/spf13/cobra v1.6.1
 	go.uber.org/zap v1.24.0
 	google.golang.org/api v0.110.0
@@ -35,7 +35,7 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
-	golang.org/x/net v0.6.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.5.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
@@ -138,7 +138,7 @@ require (
 	golang.org/x/mod v0.7.0 // indirect
 	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.2.1-0.20221108172846-9474ca31d0df // indirect
+	golang.org/x/tools v0.5.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.6.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
