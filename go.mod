@@ -158,7 +158,7 @@ require (
 	github.com/google/osv-scanner v1.1.1-0.20230130043441-25bdc68617ff
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/nats-io/nats-server/v2 v2.9.14
-	github.com/nats-io/nats.go v1.23.0
+	github.com/nats-io/nats.go v1.24.0
 	github.com/ossf/scorecard/v4 v4.8.0
 	github.com/package-url/packageurl-go v0.1.1-0.20220428063043-89078438f170
 	github.com/pkg/errors v0.9.1
