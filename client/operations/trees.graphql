@@ -1,0 +1,59 @@
+fragment packageTree on Package {
+  type
+  namespaces {
+    namespace
+    names {
+      name
+      versions {
+        version
+        subpath
+      }
+    }
+  }
+}
+
+fragment sourceTree on Source {
+  type
+  namespaces {
+    namespace
+    names {
+      name
+      tag
+      commit
+    }
+  }
+}
+
+fragment sourceMapTree on HasSourceAt {
+  package {
+    ...packageTree
+  }
+  source {
+    ...sourceTree
+  }
+  justification
+}
+
+mutation IngestPackage($input: PackageInput!) {
+  ingestPackage(input: $input) {
+    ...packageTree
+  }
+}
+
+mutation IngestSource($input: SourceInput!) {
+  ingestSource(input: $input) {
+    ...sourceTree
+  }
+}
+
+mutation IngestSourceAt($packageArg: PackageInput!, $source: SourceInput!, $input: HasSourceAtInput!) {
+  ingestPackage(input: $packageArg) {
+    ...packageTree
+  }
+  ingestSource(input: $source) {
+    ...sourceTree
+  }
+  ingestSourceAt(package: $packageArg, source: $source, input: $input) {
+    ...sourceMapTree
+  }
+}

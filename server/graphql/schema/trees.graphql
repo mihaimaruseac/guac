@@ -1,0 +1,98 @@
+type Package {
+  type: String!
+  namespaces: [PackageNamespace!]!
+}
+
+type PackageNamespace {
+  namespace: String!
+  names: [PackageName!]!
+}
+
+type PackageName {
+  name: String!
+  versions: [PackageVersion!]!
+  source: Source
+}
+
+type PackageVersion {
+  version: String!
+  subpath: String!
+  source: Source
+}
+
+type Source {
+  type: String!
+  namespaces: [SourceNamespace!]!
+}
+
+type SourceNamespace {
+  namespace: String!
+  names: [SourceName!]!
+}
+
+type SourceName {
+  name: String!
+  tag: String
+  commit: String
+  package: Package
+}
+
+type HasSourceAt {
+  package: Package!
+  source: Source!
+  justification: String!
+}
+
+input PackageFilter {
+  type: String
+  namespace: String
+  name: String
+  version: String
+  subpath: String
+}
+
+input SourceFilter {
+  type: String
+  namespace: String
+  name: String
+  tag: String
+  commit: String
+}
+
+input HasSourceAtFilter {
+  package: PackageFilter
+  source: SourceFilter
+  justification: String
+}
+
+input PackageInput {
+  type: String!
+  namespace: String = ""
+  name: String!
+  version: String = ""
+  subpath: String = ""
+}
+
+input SourceInput {
+  type: String!
+  namespace: String!
+  name: String!
+  tag: String = ""
+  commit: String = ""
+}
+
+input HasSourceAtInput {
+  justification: String!
+}
+
+extend type Query {
+  packages(filter: PackageFilter!): [Package!]!
+  sources(filter: SourceFilter!): [Source!]!
+  sourceMap(filter: HasSourceAtFilter!): [HasSourceAt!]!
+}
+
+extend type Mutation {
+  ingestPackage(input: PackageInput!): Package!
+  ingestSource(input: SourceInput!): Source!
+  ingestSourceAt(package: PackageInput!, source: SourceInput!, input: HasSourceAtInput!): HasSourceAt!
+}
