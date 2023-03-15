@@ -2,73 +2,168 @@ package memory
 
 import (
 	"context"
+	"fmt"
+	"strconv"
 
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	"layout/server/graphql/model"
 )
 
+// IDs: We have a global ID for all nodes that have references to/from.
+// Since we always ingest data and never remove, we can keep this global and
+// increment it as needed.
+// For fast retrieval, we also keep a map from ID from nodes that have it.
+type nodeID int
+type hasID interface {
+	getID() nodeID
+}
+type indexType map[nodeID]hasID
+
+func (n *pkgNamespaceStruct) getID() nodeID { return n.id }
+func (n *pkgNameStruct) getID() nodeID      { return n.id }
+func (n *pkgVersionStruct) getID() nodeID   { return n.id }
+func (n *pkgVersionNode) getID() nodeID     { return n.id }
+func (n *srcNamespaceStruct) getID() nodeID { return n.id }
+func (n *srcNameStruct) getID() nodeID      { return n.id }
+func (n *srcNameNode) getID() nodeID        { return n.id }
+func (n *srcMapLink) getID() nodeID         { return n.id }
+
 // Internal data: Packages
-type pkgTypeMap map[string]pkgNamespaceMap
-type pkgNamespaceMap map[string]pkgNameMap
+type pkgTypeMap map[string]*pkgNamespaceStruct
+type pkgNamespaceStruct struct {
+	id         nodeID
+	typeKey    string
+	namespaces pkgNamespaceMap
+}
+type pkgNamespaceMap map[string]*pkgNameStruct
+type pkgNameStruct struct {
+	id        nodeID
+	parent    nodeID
+	namespace string
+	names     pkgNameMap
+}
 type pkgNameMap map[string]*pkgVersionStruct
 type pkgVersionStruct struct {
-	source   *srcMapLink
-	versions pkgVersionList
+	id         nodeID
+	parent     nodeID
+	name       string
+	versions   pkgVersionList
+	srcMapLink nodeID
 }
 type pkgVersionList []*pkgVersionNode
 type pkgVersionNode struct {
-	version string
-	subpath string
-	source  *srcMapLink
+	id         nodeID
+	parent     nodeID
+	version    string
+	subpath    string
+	srcMapLink nodeID
 }
 
 // Be type safe, don't use any / interface{}
 type pkgNameOrVersion interface {
 	implementsPkgNameOrVersion()
-	setSource(link *srcMapLink)
+	setSrcMapLink(id nodeID)
+	getSrcMapLink() nodeID
 }
 
 func (p *pkgVersionStruct) implementsPkgNameOrVersion() {}
 func (p *pkgVersionNode) implementsPkgNameOrVersion()   {}
-func (p *pkgVersionStruct) setSource(link *srcMapLink)  { p.source = link }
-func (p *pkgVersionNode) setSource(link *srcMapLink)    { p.source = link }
+func (p *pkgVersionStruct) setSrcMapLink(id nodeID)     { p.srcMapLink = id }
+func (p *pkgVersionNode) setSrcMapLink(id nodeID)       { p.srcMapLink = id }
+func (p *pkgVersionStruct) getSrcMapLink() nodeID       { return p.srcMapLink }
+func (p *pkgVersionNode) getSrcMapLink() nodeID         { return p.srcMapLink }
 
 // Internal data: Sources
-type srcTypeMap map[string]srcNamespaceMap
-type srcNamespaceMap map[string]srcNameList
+type srcTypeMap map[string]*srcNamespaceStruct
+type srcNamespaceStruct struct {
+	id         nodeID
+	typeKey    string
+	namespaces srcNamespaceMap
+}
+type srcNamespaceMap map[string]*srcNameStruct
+type srcNameStruct struct {
+	id        nodeID
+	parent    nodeID
+	namespace string
+	names     srcNameList
+}
 type srcNameList []*srcNameNode
 type srcNameNode struct {
-	name   string
-	tag    *string
-	commit *string
-	pkg    *srcMapLink
+	id         nodeID
+	parent     nodeID
+	name       string
+	tag        *string
+	commit     *string
+	srcMapLink nodeID
 }
 
 // Internal data: link between sources and packages (HasSourceAt)
 type srcMaps []*srcMapLink
 type srcMapLink struct {
+	id            nodeID
+	sourceID      nodeID
+	packageID     nodeID
 	justification string
-	source        *srcNameNode
-	pkg           pkgNameOrVersion
 }
 
-var packages = pkgTypeMap{}
-var sources = srcTypeMap{}
-var sourceMaps = srcMaps{}
+var (
+	id         nodeID = 0
+	index             = indexType{}
+	packages          = pkgTypeMap{}
+	sources           = srcTypeMap{}
+	sourceMaps        = srcMaps{}
+)
+
+// In general, we would add a lock around this function
+func getNextID() nodeID {
+	id = id + 1
+	return id
+}
 
 func (c *client) IngestPackage(ctx context.Context, input model.PackageInput) (*model.Package, error) {
-	namespaces, hasNamespace := packages[input.Type]
-	names, hasName := namespaces[nilToEmpty(input.Namespace)]
-	versionStruct, hasVersions := names[input.Name]
-	versions := pkgVersionList{}
-	if hasVersions {
-		versions = versionStruct.versions
+	namespacesStruct, hasNamespace := packages[input.Type]
+	if !hasNamespace {
+		namespacesStruct = &pkgNamespaceStruct{
+			id:         getNextID(),
+			typeKey:    input.Type,
+			namespaces: pkgNamespaceMap{},
+		}
+		index[namespacesStruct.id] = namespacesStruct
 	}
+	namespaces := namespacesStruct.namespaces
+
+	namesStruct, hasName := namespaces[nilToEmpty(input.Namespace)]
+	if !hasName {
+		namesStruct = &pkgNameStruct{
+			id:        getNextID(),
+			parent:    namespacesStruct.id,
+			namespace: nilToEmpty(input.Namespace),
+			names:     pkgNameMap{},
+		}
+		index[namesStruct.id] = namesStruct
+	}
+	names := namesStruct.names
+
+	versionStruct, hasVersions := names[input.Name]
+	if !hasVersions {
+		versionStruct = &pkgVersionStruct{
+			id:       getNextID(),
+			parent:   namesStruct.id,
+			name:     input.Name,
+			versions: pkgVersionList{},
+		}
+		index[versionStruct.id] = versionStruct
+	}
+	versions := versionStruct.versions
+
 	newVersion := pkgVersionNode{
+		id:      getNextID(),
+		parent:  versionStruct.id,
 		version: nilToEmpty(input.Version),
 		subpath: nilToEmpty(input.Subpath),
 	}
+	index[newVersion.id] = &newVersion
 
 	// Don't insert duplicates
 	duplicate := false
@@ -79,38 +174,42 @@ func (c *client) IngestPackage(ctx context.Context, input model.PackageInput) (*
 		}
 	}
 	if !duplicate {
-		versions = append(versions, &newVersion)
-		if !hasNamespace {
-			packages[input.Type] = pkgNamespaceMap{}
-		}
-		if !hasName {
-			packages[input.Type][nilToEmpty(input.Namespace)] = pkgNameMap{}
-		}
-		if !hasVersions {
-			versionStruct = &pkgVersionStruct{}
-		}
-		versionStruct.versions = versions
-		packages[input.Type][nilToEmpty(input.Namespace)][input.Name] = versionStruct
+		// Need to append to version and replace field in versionStruct
+		versionStruct.versions = append(versions, &newVersion)
+		// All others are refs to maps, so no need to update struct
+		names[input.Name] = versionStruct
+		namespaces[nilToEmpty(input.Namespace)] = namesStruct
+		packages[input.Type] = namespacesStruct
 	}
 
 	// build return GraphQL type
-	out := packageFromInput(input)
-	return out, nil
+	return buildPackageResponse(newVersion.id, nil)
 }
 
 func (c *client) Packages(ctx context.Context, filter model.PackageFilter) ([]*model.Package, error) {
+	if filter.ID != nil {
+		id, err := strconv.Atoi(*filter.ID)
+		if err != nil {
+			return nil, err
+		}
+		p, err := buildPackageResponse(nodeID(id), &filter)
+		if err != nil {
+			return nil, err
+		}
+		return []*model.Package{p}, nil
+	}
 	out := []*model.Package{}
 	for dbType, namespaces := range packages {
 		if noMatch(filter.Type, dbType) {
 			continue
 		}
 		pNamespaces := []*model.PackageNamespace{}
-		for namespace, names := range namespaces {
+		for namespace, names := range namespaces.namespaces {
 			if noMatch(filter.Namespace, namespace) {
 				continue
 			}
 			pns := []*model.PackageName{}
-			for name, versions := range names {
+			for name, versions := range names.names {
 				if noMatch(filter.Name, name) {
 					continue
 				}
@@ -123,24 +222,36 @@ func (c *client) Packages(ctx context.Context, filter model.PackageFilter) ([]*m
 						continue
 					}
 					pv := model.PackageVersion{
+						// IDs are generated as string even though we ask for integers
+						// See https://github.com/99designs/gqlgen/issues/2561
+						ID:      fmt.Sprintf("%d", v.id),
 						Version: v.version,
 						Subpath: v.subpath,
 					}
 					pvs = append(pvs, &pv)
 				}
 				pn := model.PackageName{
+					// IDs are generated as string even though we ask for integers
+					// See https://github.com/99designs/gqlgen/issues/2561
+					ID:       fmt.Sprintf("%d", versions.id),
 					Name:     name,
 					Versions: pvs,
 				}
 				pns = append(pns, &pn)
 			}
 			pn := model.PackageNamespace{
+				// IDs are generated as string even though we ask for integers
+				// See https://github.com/99designs/gqlgen/issues/2561
+				ID:        fmt.Sprintf("%d", names.id),
 				Namespace: namespace,
 				Names:     pns,
 			}
 			pNamespaces = append(pNamespaces, &pn)
 		}
 		p := model.Package{
+			// IDs are generated as string even though we ask for integers
+			// See https://github.com/99designs/gqlgen/issues/2561
+			ID:         fmt.Sprintf("%d", namespaces.id),
 			Type:       dbType,
 			Namespaces: pNamespaces,
 		}
@@ -149,12 +260,61 @@ func (c *client) Packages(ctx context.Context, filter model.PackageFilter) ([]*m
 	return out, nil
 }
 
-func (c *client) IngestSource(ctx context.Context, input model.SourceInput) (*model.Source, error) {
-	namespaces, hasNamespace := sources[input.Type]
-	names := namespaces[input.Namespace]
-	newSource := srcNameNode{
-		name: input.Name,
+func (c *client) SourceFromPackageVersion(ctx context.Context, pkg *model.PackageVersion) (*model.Source, error) {
+	id, err := strconv.Atoi(pkg.ID)
+	if err != nil {
+		return nil, err
 	}
+	internalNode, ok := index[nodeID(id)]
+	if !ok {
+		return nil, gqlerror.Errorf("ID does not match existing node")
+	}
+	internalPkg, ok := internalNode.(pkgNameOrVersion)
+	if !ok {
+		return nil, gqlerror.Errorf("ID does not match expected node type")
+	}
+	srcMapID := internalPkg.getSrcMapLink()
+	srcMapNode, ok := index[srcMapID]
+	if !ok {
+		return nil, nil
+	}
+	srcMap, ok := srcMapNode.(*srcMapLink)
+	if !ok {
+		return nil, gqlerror.Errorf("ID does not match expected node type")
+	}
+	return buildSourceResponse(srcMap.sourceID, nil)
+}
+
+func (c *client) IngestSource(ctx context.Context, input model.SourceInput) (*model.Source, error) {
+	namespacesStruct, hasNamespace := sources[input.Type]
+	if !hasNamespace {
+		namespacesStruct = &srcNamespaceStruct{
+			id:         getNextID(),
+			typeKey:    input.Type,
+			namespaces: srcNamespaceMap{},
+		}
+		index[namespacesStruct.id] = namespacesStruct
+	}
+	namespaces := namespacesStruct.namespaces
+
+	namesStruct, hasName := namespaces[input.Namespace]
+	if !hasName {
+		namesStruct = &srcNameStruct{
+			id:        getNextID(),
+			parent:    namespacesStruct.id,
+			namespace: input.Namespace,
+			names:     srcNameList{},
+		}
+		index[namesStruct.id] = namesStruct
+	}
+	names := namesStruct.names
+
+	newSource := srcNameNode{
+		id:     getNextID(),
+		parent: namesStruct.id,
+		name:   input.Name,
+	}
+	index[newSource.id] = &newSource
 	if input.Tag != nil {
 		tag := *input.Tag
 		newSource.tag = &tag
@@ -180,31 +340,40 @@ func (c *client) IngestSource(ctx context.Context, input model.SourceInput) (*mo
 		break
 	}
 	if !duplicate {
-		names = append(names, &newSource)
-		if !hasNamespace {
-			sources[input.Type] = srcNamespaceMap{}
-		}
-		sources[input.Type][input.Namespace] = names
+		namesStruct.names = append(names, &newSource)
+		namespaces[input.Namespace] = namesStruct
+		sources[input.Type] = namespacesStruct
 	}
 
 	// build return GraphQL type
-	out := sourceFromInput(input)
-	return out, nil
+	return buildSourceResponse(newSource.id, nil)
 }
 
+// TODO: add ID fields
 func (c *client) Sources(ctx context.Context, filter model.SourceFilter) ([]*model.Source, error) {
+	if filter.ID != nil {
+		id, err := strconv.Atoi(*filter.ID)
+		if err != nil {
+			return nil, err
+		}
+		s, err := buildSourceResponse(nodeID(id), &filter)
+		if err != nil {
+			return nil, err
+		}
+		return []*model.Source{s}, nil
+	}
 	out := []*model.Source{}
 	for dbType, namespaces := range sources {
 		if noMatch(filter.Type, dbType) {
 			continue
 		}
 		sNamespaces := []*model.SourceNamespace{}
-		for namespace, names := range namespaces {
+		for namespace, names := range namespaces.namespaces {
 			if noMatch(filter.Namespace, namespace) {
 				continue
 			}
 			sns := []*model.SourceName{}
-			for _, s := range names {
+			for _, s := range names.names {
 				if noMatch(filter.Name, s.name) {
 					continue
 				}
@@ -215,6 +384,9 @@ func (c *client) Sources(ctx context.Context, filter model.SourceFilter) ([]*mod
 					continue
 				}
 				newSrc := model.SourceName{
+					// IDs are generated as string even though we ask for integers
+					// See https://github.com/99designs/gqlgen/issues/2561
+					ID:     fmt.Sprintf("%d", s.id),
 					Name:   s.name,
 					Tag:    s.tag,
 					Commit: s.commit,
@@ -222,12 +394,18 @@ func (c *client) Sources(ctx context.Context, filter model.SourceFilter) ([]*mod
 				sns = append(sns, &newSrc)
 			}
 			sn := model.SourceNamespace{
+				// IDs are generated as string even though we ask for integers
+				// See https://github.com/99designs/gqlgen/issues/2561
+				ID:        fmt.Sprintf("%d", names.id),
 				Namespace: namespace,
 				Names:     sns,
 			}
 			sNamespaces = append(sNamespaces, &sn)
 		}
 		s := model.Source{
+			// IDs are generated as string even though we ask for integers
+			// See https://github.com/99designs/gqlgen/issues/2561
+			ID:         fmt.Sprintf("%d", namespaces.id),
 			Type:       dbType,
 			Namespaces: sNamespaces,
 		}
@@ -254,13 +432,13 @@ func (c *client) IngestSourceAt(ctx context.Context, packageArg model.PackageInp
 	if !srcHasNamespace {
 		return nil, gqlerror.Errorf("Source type \"%s\" not found", source.Type)
 	}
-	srcName, srcHasName := srcNamespace[source.Namespace]
+	srcName, srcHasName := srcNamespace.namespaces[source.Namespace]
 	if !srcHasName {
 		return nil, gqlerror.Errorf("Source namespace \"%s\" not found", source.Namespace)
 	}
-	var srcPtr *srcNameNode
-	srcPtr = nil
-	for _, src := range srcName {
+	found := false
+	var sourceID nodeID
+	for _, src := range srcName.names {
 		if src.name != source.Name {
 			continue
 		}
@@ -270,12 +448,13 @@ func (c *client) IngestSourceAt(ctx context.Context, packageArg model.PackageInp
 		if noMatchPtrInput(source.Commit, src.commit) {
 			continue
 		}
-		if srcPtr != nil {
+		if found {
 			return nil, gqlerror.Errorf("More than one source matches input")
 		}
-		srcPtr = src
+		sourceID = src.id
+		found = true
 	}
-	if srcPtr == nil {
+	if !found {
 		return nil, gqlerror.Errorf("No source matches input")
 	}
 
@@ -283,19 +462,19 @@ func (c *client) IngestSourceAt(ctx context.Context, packageArg model.PackageInp
 	if !pkgHasNamespace {
 		return nil, gqlerror.Errorf("Package type \"%s\" not found", packageArg.Type)
 	}
-	pkgName, pkgHasName := pkgNamespace[nilToEmpty(packageArg.Namespace)]
+	pkgName, pkgHasName := pkgNamespace.namespaces[nilToEmpty(packageArg.Namespace)]
 	if !pkgHasName {
 		return nil, gqlerror.Errorf("Package namespace \"%s\" not found", nilToEmpty(packageArg.Namespace))
 	}
-	pkgVersion, pkgHasVersion := pkgName[packageArg.Name]
+	pkgVersion, pkgHasVersion := pkgName.names[packageArg.Name]
 	if !pkgHasVersion {
 		return nil, gqlerror.Errorf("Package name \"%s\" not found", packageArg.Name)
 	}
-	var pkgPtr pkgNameOrVersion
+	var packageID nodeID
 	if !matchAtPackageNameLevel {
-		pkgPtr = pkgVersion
+		packageID = pkgVersion.id
 	} else {
-		pkgPtr = nil
+		found = false
 		for _, version := range pkgVersion.versions {
 			if noMatchInput(packageArg.Version, version.version) {
 				continue
@@ -303,38 +482,49 @@ func (c *client) IngestSourceAt(ctx context.Context, packageArg model.PackageInp
 			if noMatchInput(packageArg.Subpath, version.subpath) {
 				continue
 			}
-			if pkgPtr != nil {
+			if found {
 				return nil, gqlerror.Errorf("More than one package matches input")
 			}
-			pkgPtr = version
+			packageID = version.id
+			found = true
 		}
-	}
-	if pkgPtr == nil {
-		return nil, gqlerror.Errorf("No package matches input")
+		if !found {
+			return nil, gqlerror.Errorf("No package matches input")
+		}
 	}
 
 	// store the link
 	newSrcMapLink := &srcMapLink{
+		id:            getNextID(),
+		sourceID:      sourceID,
+		packageID:     packageID,
 		justification: input.Justification,
-		source:        srcPtr,
-		pkg:           pkgPtr,
 	}
-	pkgPtr.setSource(newSrcMapLink)
-	srcPtr.pkg = newSrcMapLink
+	index[newSrcMapLink.id] = newSrcMapLink
 	sourceMaps = append(sourceMaps, newSrcMapLink)
+	// set the backlinks
+	index[packageID].(pkgNameOrVersion).setSrcMapLink(newSrcMapLink.id)
+	index[sourceID].(*srcNameNode).srcMapLink = newSrcMapLink.id
 
 	// build return GraphQL type
-	pkg := packageFromInput(packageArg)
-	src := sourceFromInput(source)
+	p, err := buildPackageResponse(packageID, nil)
+	if err != nil {
+		return nil, err
+	}
+	s, err := buildSourceResponse(sourceID, nil)
+	if err != nil {
+		return nil, err
+	}
 	out := model.HasSourceAt{
-		Package:       pkg,
-		Source:        src,
+		Package:       p,
+		Source:        s,
 		Justification: input.Justification,
 	}
 
 	return &out, nil
 }
 
+// TODO: add ID fields
 func (c *client) SourceMap(ctx context.Context, filter model.HasSourceAtFilter) ([]*model.HasSourceAt, error) {
 	out := []*model.HasSourceAt{}
 
@@ -349,11 +539,17 @@ func (c *client) SourceMap(ctx context.Context, filter model.HasSourceAtFilter) 
 		// say, C), for a total of P*C nodes than then need to be
 		// compared with the, say, M sourceMaps that we select so far.
 		// In general M << {P, C}, so this is wasteful.
-		p := packageMatchingFilter(filter.Package, mapLink.pkg)
+		p, err := buildPackageResponse(mapLink.packageID, filter.Package)
+		if err != nil {
+			return nil, err
+		}
 		if p == nil {
 			continue
 		}
-		s := sourceMatchingFilter(filter.Source, mapLink.source)
+		s, err := buildSourceResponse(mapLink.sourceID, filter.Source)
+		if err != nil {
+			return nil, err
+		}
 		if s == nil {
 			continue
 		}
@@ -366,6 +562,170 @@ func (c *client) SourceMap(ctx context.Context, filter model.HasSourceAtFilter) 
 	}
 
 	return out, nil
+}
+
+// Builds a model.Package to send as GraphQL response, starting from id.
+// The optional filter allows restricting output (on selection operations).
+func buildPackageResponse(id nodeID, filter *model.PackageFilter) (*model.Package, error) {
+	if filter != nil && filter.ID != nil {
+		filteredID, err := strconv.Atoi(*filter.ID)
+		if err != nil {
+			return nil, err
+		}
+		if nodeID(filteredID) != id {
+			return nil, nil
+		}
+	}
+
+	node, ok := index[id]
+	if !ok {
+		return nil, gqlerror.Errorf("ID does not match existing node")
+	}
+
+	pvl := []*model.PackageVersion{}
+	if versionNode, ok := node.(*pkgVersionNode); ok {
+		pv := model.PackageVersion{
+			// IDs are generated as string even though we ask for integers
+			// See https://github.com/99designs/gqlgen/issues/2561
+			ID:      fmt.Sprintf("%d", versionNode.id),
+			Version: versionNode.version,
+			Subpath: versionNode.subpath,
+		}
+		if filter != nil && noMatch(filter.Version, pv.Version) {
+			return nil, nil
+		}
+		if filter != nil && noMatch(filter.Subpath, pv.Subpath) {
+			return nil, nil
+		}
+		pvl = append(pvl, &pv)
+		node = index[versionNode.parent]
+	}
+
+	pnl := []*model.PackageName{}
+	if versionStruct, ok := node.(*pkgVersionStruct); ok {
+		pn := model.PackageName{
+			// IDs are generated as string even though we ask for integers
+			// See https://github.com/99designs/gqlgen/issues/2561
+			ID:       fmt.Sprintf("%d", versionStruct.id),
+			Name:     versionStruct.name,
+			Versions: pvl,
+		}
+		if filter != nil && noMatch(filter.Name, pn.Name) {
+			return nil, nil
+		}
+		pnl = append(pnl, &pn)
+		node = index[versionStruct.parent]
+	}
+
+	pnsl := []*model.PackageNamespace{}
+	if nameStruct, ok := node.(*pkgNameStruct); ok {
+		pns := model.PackageNamespace{
+			// IDs are generated as string even though we ask for integers
+			// See https://github.com/99designs/gqlgen/issues/2561
+			ID:        fmt.Sprintf("%d", nameStruct.id),
+			Namespace: nameStruct.namespace,
+			Names:     pnl,
+		}
+		if filter != nil && noMatch(filter.Namespace, pns.Namespace) {
+			return nil, nil
+		}
+		pnsl = append(pnsl, &pns)
+		node = index[nameStruct.parent]
+	}
+
+	namespaceStruct, ok := node.(*pkgNamespaceStruct)
+	if !ok {
+		return nil, gqlerror.Errorf("ID does not match expected node type")
+	}
+	p := model.Package{
+		// IDs are generated as string even though we ask for integers
+		// See https://github.com/99designs/gqlgen/issues/2561
+		ID:         fmt.Sprintf("%d", namespaceStruct.id),
+		Type:       namespaceStruct.typeKey,
+		Namespaces: pnsl,
+	}
+	if filter != nil && noMatch(filter.Type, p.Type) {
+		return nil, nil
+	}
+	return &p, nil
+}
+
+// Builds a model.Source to send as GraphQL response, starting from id.
+// The optional filter allows restricting output (on selection operations).
+func buildSourceResponse(id nodeID, filter *model.SourceFilter) (*model.Source, error) {
+	if filter != nil && filter.ID != nil {
+		filteredID, err := strconv.Atoi(*filter.ID)
+		if err != nil {
+			return nil, err
+		}
+		if nodeID(filteredID) != id {
+			return nil, nil
+		}
+	}
+
+	node, ok := index[id]
+	if !ok {
+		return nil, gqlerror.Errorf("ID does not match existing node")
+	}
+
+	snl := []*model.SourceName{}
+	if nameNode, ok := node.(*srcNameNode); ok {
+		sn := model.SourceName{
+			// IDs are generated as string even though we ask for integers
+			// See https://github.com/99designs/gqlgen/issues/2561
+			ID:   fmt.Sprintf("%d", nameNode.id),
+			Name: nameNode.name,
+		}
+		if nameNode.tag != nil {
+			sn.Tag = nameNode.tag
+		}
+		if nameNode.commit != nil {
+			sn.Commit = nameNode.commit
+		}
+		if filter != nil && noMatch(filter.Name, sn.Name) {
+			return nil, nil
+		}
+		if filter != nil && noMatchPtr(filter.Tag, sn.Tag) {
+			return nil, nil
+		}
+		if filter != nil && noMatchPtr(filter.Commit, sn.Commit) {
+			return nil, nil
+		}
+		snl = append(snl, &sn)
+		node = index[nameNode.parent]
+	}
+
+	snsl := []*model.SourceNamespace{}
+	if nameStruct, ok := node.(*srcNameStruct); ok {
+		sns := model.SourceNamespace{
+			// IDs are generated as string even though we ask for integers
+			// See https://github.com/99designs/gqlgen/issues/2561
+			ID:        fmt.Sprintf("%d", nameStruct.id),
+			Namespace: nameStruct.namespace,
+			Names:     snl,
+		}
+		if filter != nil && noMatch(filter.Namespace, sns.Namespace) {
+			return nil, nil
+		}
+		snsl = append(snsl, &sns)
+		node = index[nameStruct.parent]
+	}
+
+	namespaceStruct, ok := node.(*srcNamespaceStruct)
+	if !ok {
+		return nil, gqlerror.Errorf("ID does not match expected node type")
+	}
+	s := model.Source{
+		// IDs are generated as string even though we ask for integers
+		// See https://github.com/99designs/gqlgen/issues/2561
+		ID:         fmt.Sprintf("%d", namespaceStruct.id),
+		Type:       namespaceStruct.typeKey,
+		Namespaces: snsl,
+	}
+	if filter != nil && noMatch(filter.Type, s.Type) {
+		return nil, nil
+	}
+	return &s, nil
 }
 
 func noMatch(filter *string, value string) bool {
@@ -419,172 +779,4 @@ func nilToEmpty(input *string) string {
 		return ""
 	}
 	return *input
-}
-
-func packageFromInput(input model.PackageInput) *model.Package {
-	pv := model.PackageVersion{
-		Version: nilToEmpty(input.Version),
-		Subpath: nilToEmpty(input.Subpath),
-	}
-	pn := model.PackageName{
-		Name:     input.Name,
-		Versions: []*model.PackageVersion{&pv},
-	}
-	pns := model.PackageNamespace{
-		Namespace: nilToEmpty(input.Namespace),
-		Names:     []*model.PackageName{&pn},
-	}
-	return &model.Package{
-		Type:       input.Type,
-		Namespaces: []*model.PackageNamespace{&pns},
-	}
-}
-
-func packageMatchingFilter(filter *model.PackageFilter, packageArg pkgNameOrVersion) *model.Package {
-	var out *model.Package
-	out = nil
-
-	for dbType, namespaces := range packages {
-		if filter != nil && noMatch(filter.Type, dbType) {
-			return nil
-		}
-		foundNamespace := false
-		pNamespaces := []*model.PackageNamespace{}
-		for namespace, names := range namespaces {
-			if filter != nil && noMatch(filter.Namespace, namespace) {
-				return nil
-			}
-			foundName := false
-			pns := []*model.PackageName{}
-			for name, versions := range names {
-				if filter != nil && noMatch(filter.Name, name) {
-					return nil
-				}
-				if packageArg == versions {
-					pn := model.PackageName{
-						Name: name,
-					}
-					pns = append(pns, &pn)
-					foundName = true
-				} else {
-					pvs := []*model.PackageVersion{}
-					foundVersion := false
-					for _, v := range versions.versions {
-						if filter != nil && noMatch(filter.Version, v.version) {
-							return nil
-						}
-						if filter != nil && noMatch(filter.Subpath, v.subpath) {
-							return nil
-						}
-						if packageArg != v {
-							continue
-						}
-						pv := model.PackageVersion{
-							Version: v.version,
-							Subpath: v.subpath,
-						}
-						pvs = append(pvs, &pv)
-						foundVersion = true
-					}
-					if foundVersion {
-						pn := model.PackageName{
-							Name:     name,
-							Versions: pvs,
-						}
-						pns = append(pns, &pn)
-						foundName = true
-					}
-				}
-			}
-			if foundName {
-				pn := model.PackageNamespace{
-					Namespace: namespace,
-					Names:     pns,
-				}
-				pNamespaces = append(pNamespaces, &pn)
-				foundNamespace = true
-			}
-		}
-		if foundNamespace {
-			out = &model.Package{
-				Type:       dbType,
-				Namespaces: pNamespaces,
-			}
-		}
-	}
-
-	return out
-}
-
-func sourceFromInput(input model.SourceInput) *model.Source {
-	sn := model.SourceName{
-		Name:   input.Name,
-		Tag:    input.Tag,
-		Commit: input.Commit,
-	}
-	sns := model.SourceNamespace{
-		Namespace: input.Namespace,
-		Names:     []*model.SourceName{&sn},
-	}
-	return &model.Source{
-		Type:       input.Type,
-		Namespaces: []*model.SourceNamespace{&sns},
-	}
-}
-
-func sourceMatchingFilter(filter *model.SourceFilter, source *srcNameNode) *model.Source {
-	var out *model.Source
-	out = nil
-
-	for dbType, namespaces := range sources {
-		if filter != nil && noMatch(filter.Type, dbType) {
-			continue
-		}
-		foundNamespace := false
-		sNamespaces := []*model.SourceNamespace{}
-		for namespace, names := range namespaces {
-			if filter != nil && noMatch(filter.Namespace, namespace) {
-				continue
-			}
-			foundName := false
-			sns := []*model.SourceName{}
-			for _, s := range names {
-				if filter != nil && noMatch(filter.Name, s.name) {
-					continue
-				}
-				if filter != nil && noMatchPtr(filter.Tag, s.tag) {
-					continue
-				}
-				if filter != nil && noMatchPtr(filter.Commit, s.commit) {
-					continue
-				}
-				if source != s {
-					continue
-				}
-				newSrc := model.SourceName{
-					Name:   s.name,
-					Tag:    s.tag,
-					Commit: s.commit,
-				}
-				sns = append(sns, &newSrc)
-				foundName = true
-			}
-			if foundName {
-				sn := model.SourceNamespace{
-					Namespace: namespace,
-					Names:     sns,
-				}
-				sNamespaces = append(sNamespaces, &sn)
-				foundNamespace = true
-			}
-		}
-		if foundNamespace {
-			out = &model.Source{
-				Type:       dbType,
-				Namespaces: sNamespaces,
-			}
-		}
-	}
-
-	return out
 }

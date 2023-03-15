@@ -20,6 +20,9 @@ type Backend interface {
 
 	// Evidence tree ingestion
 	IngestSourceAt(ctx context.Context, pkg model.PackageInput, source model.SourceInput, input model.HasSourceAtInput) (*model.HasSourceAt, error)
+
+	// Sub-selections
+	SourceFromPackageVersion(ctx context.Context, pkg *model.PackageVersion) (*model.Source, error)
 }
 
 type BackendArgs interface{}

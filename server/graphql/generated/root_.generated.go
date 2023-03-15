@@ -31,6 +31,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	Mutation() MutationResolver
+	PackageVersion() PackageVersionResolver
 	Query() QueryResolver
 }
 
@@ -39,6 +40,7 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	HasSourceAt struct {
+		ID            func(childComplexity int) int
 		Justification func(childComplexity int) int
 		Package       func(childComplexity int) int
 		Source        func(childComplexity int) int
@@ -51,22 +53,26 @@ type ComplexityRoot struct {
 	}
 
 	Package struct {
+		ID         func(childComplexity int) int
 		Namespaces func(childComplexity int) int
 		Type       func(childComplexity int) int
 	}
 
 	PackageName struct {
+		ID       func(childComplexity int) int
 		Name     func(childComplexity int) int
 		Source   func(childComplexity int) int
 		Versions func(childComplexity int) int
 	}
 
 	PackageNamespace struct {
+		ID        func(childComplexity int) int
 		Names     func(childComplexity int) int
 		Namespace func(childComplexity int) int
 	}
 
 	PackageVersion struct {
+		ID      func(childComplexity int) int
 		Source  func(childComplexity int) int
 		Subpath func(childComplexity int) int
 		Version func(childComplexity int) int
@@ -79,18 +85,21 @@ type ComplexityRoot struct {
 	}
 
 	Source struct {
+		ID         func(childComplexity int) int
 		Namespaces func(childComplexity int) int
 		Type       func(childComplexity int) int
 	}
 
 	SourceName struct {
 		Commit  func(childComplexity int) int
+		ID      func(childComplexity int) int
 		Name    func(childComplexity int) int
 		Package func(childComplexity int) int
 		Tag     func(childComplexity int) int
 	}
 
 	SourceNamespace struct {
+		ID        func(childComplexity int) int
 		Names     func(childComplexity int) int
 		Namespace func(childComplexity int) int
 	}
@@ -110,6 +119,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "HasSourceAt.id":
+		if e.complexity.HasSourceAt.ID == nil {
+			break
+		}
+
+		return e.complexity.HasSourceAt.ID(childComplexity), true
 
 	case "HasSourceAt.justification":
 		if e.complexity.HasSourceAt.Justification == nil {
@@ -168,6 +184,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Mutation.IngestSourceAt(childComplexity, args["package"].(model.PackageInput), args["source"].(model.SourceInput), args["input"].(model.HasSourceAtInput)), true
 
+	case "Package.id":
+		if e.complexity.Package.ID == nil {
+			break
+		}
+
+		return e.complexity.Package.ID(childComplexity), true
+
 	case "Package.namespaces":
 		if e.complexity.Package.Namespaces == nil {
 			break
@@ -181,6 +204,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Package.Type(childComplexity), true
+
+	case "PackageName.id":
+		if e.complexity.PackageName.ID == nil {
+			break
+		}
+
+		return e.complexity.PackageName.ID(childComplexity), true
 
 	case "PackageName.name":
 		if e.complexity.PackageName.Name == nil {
@@ -203,6 +233,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PackageName.Versions(childComplexity), true
 
+	case "PackageNamespace.id":
+		if e.complexity.PackageNamespace.ID == nil {
+			break
+		}
+
+		return e.complexity.PackageNamespace.ID(childComplexity), true
+
 	case "PackageNamespace.names":
 		if e.complexity.PackageNamespace.Names == nil {
 			break
@@ -216,6 +253,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.PackageNamespace.Namespace(childComplexity), true
+
+	case "PackageVersion.id":
+		if e.complexity.PackageVersion.ID == nil {
+			break
+		}
+
+		return e.complexity.PackageVersion.ID(childComplexity), true
 
 	case "PackageVersion.source":
 		if e.complexity.PackageVersion.Source == nil {
@@ -274,6 +318,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Sources(childComplexity, args["filter"].(model.SourceFilter)), true
 
+	case "Source.id":
+		if e.complexity.Source.ID == nil {
+			break
+		}
+
+		return e.complexity.Source.ID(childComplexity), true
+
 	case "Source.namespaces":
 		if e.complexity.Source.Namespaces == nil {
 			break
@@ -295,6 +346,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.SourceName.Commit(childComplexity), true
 
+	case "SourceName.id":
+		if e.complexity.SourceName.ID == nil {
+			break
+		}
+
+		return e.complexity.SourceName.ID(childComplexity), true
+
 	case "SourceName.name":
 		if e.complexity.SourceName.Name == nil {
 			break
@@ -315,6 +373,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.SourceName.Tag(childComplexity), true
+
+	case "SourceNamespace.id":
+		if e.complexity.SourceNamespace.ID == nil {
+			break
+		}
+
+		return e.complexity.SourceNamespace.ID(childComplexity), true
 
 	case "SourceNamespace.names":
 		if e.complexity.SourceNamespace.Names == nil {
@@ -405,38 +470,45 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	{Name: "../schema/trees.graphql", Input: `type Package {
+  id: ID!
   type: String!
   namespaces: [PackageNamespace!]!
 }
 
 type PackageNamespace {
+  id: ID!
   namespace: String!
   names: [PackageName!]!
 }
 
 type PackageName {
+  id: ID!
   name: String!
   versions: [PackageVersion!]!
   source: Source
 }
 
 type PackageVersion {
+  id: ID!
   version: String!
   subpath: String!
   source: Source
 }
 
 type Source {
+  id: ID!
   type: String!
   namespaces: [SourceNamespace!]!
 }
 
 type SourceNamespace {
+  id: ID!
   namespace: String!
   names: [SourceName!]!
 }
 
 type SourceName {
+  id: ID!
   name: String!
   tag: String
   commit: String
@@ -444,12 +516,14 @@ type SourceName {
 }
 
 type HasSourceAt {
+  id: ID!
   package: Package!
   source: Source!
   justification: String!
 }
 
 input PackageFilter {
+  id: ID
   type: String
   namespace: String
   name: String
@@ -458,6 +532,7 @@ input PackageFilter {
 }
 
 input SourceFilter {
+  id: ID
   type: String
   namespace: String
   name: String
@@ -466,6 +541,7 @@ input SourceFilter {
 }
 
 input HasSourceAtFilter {
+  id: ID
   package: PackageFilter
   source: SourceFilter
   justification: String

@@ -3,12 +3,14 @@
 package model
 
 type HasSourceAt struct {
+	ID            string   `json:"id"`
 	Package       *Package `json:"package"`
 	Source        *Source  `json:"source"`
 	Justification string   `json:"justification"`
 }
 
 type HasSourceAtFilter struct {
+	ID            *string        `json:"id"`
 	Package       *PackageFilter `json:"package"`
 	Source        *SourceFilter  `json:"source"`
 	Justification *string        `json:"justification"`
@@ -19,11 +21,13 @@ type HasSourceAtInput struct {
 }
 
 type Package struct {
+	ID         string              `json:"id"`
 	Type       string              `json:"type"`
 	Namespaces []*PackageNamespace `json:"namespaces"`
 }
 
 type PackageFilter struct {
+	ID        *string `json:"id"`
 	Type      *string `json:"type"`
 	Namespace *string `json:"namespace"`
 	Name      *string `json:"name"`
@@ -40,28 +44,33 @@ type PackageInput struct {
 }
 
 type PackageName struct {
+	ID       string            `json:"id"`
 	Name     string            `json:"name"`
 	Versions []*PackageVersion `json:"versions"`
 	Source   *Source           `json:"source"`
 }
 
 type PackageNamespace struct {
+	ID        string         `json:"id"`
 	Namespace string         `json:"namespace"`
 	Names     []*PackageName `json:"names"`
 }
 
 type PackageVersion struct {
+	ID      string  `json:"id"`
 	Version string  `json:"version"`
 	Subpath string  `json:"subpath"`
 	Source  *Source `json:"source"`
 }
 
 type Source struct {
+	ID         string             `json:"id"`
 	Type       string             `json:"type"`
 	Namespaces []*SourceNamespace `json:"namespaces"`
 }
 
 type SourceFilter struct {
+	ID        *string `json:"id"`
 	Type      *string `json:"type"`
 	Namespace *string `json:"namespace"`
 	Name      *string `json:"name"`
@@ -78,6 +87,7 @@ type SourceInput struct {
 }
 
 type SourceName struct {
+	ID      string   `json:"id"`
 	Name    string   `json:"name"`
 	Tag     *string  `json:"tag"`
 	Commit  *string  `json:"commit"`
@@ -85,6 +95,7 @@ type SourceName struct {
 }
 
 type SourceNamespace struct {
+	ID        string        `json:"id"`
 	Namespace string        `json:"namespace"`
 	Names     []*SourceName `json:"names"`
 }

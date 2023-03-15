@@ -1,36 +1,43 @@
 type Package {
+  id: ID!
   type: String!
   namespaces: [PackageNamespace!]!
 }
 
 type PackageNamespace {
+  id: ID!
   namespace: String!
   names: [PackageName!]!
 }
 
 type PackageName {
+  id: ID!
   name: String!
   versions: [PackageVersion!]!
   source: Source
 }
 
 type PackageVersion {
+  id: ID!
   version: String!
   subpath: String!
   source: Source
 }
 
 type Source {
+  id: ID!
   type: String!
   namespaces: [SourceNamespace!]!
 }
 
 type SourceNamespace {
+  id: ID!
   namespace: String!
   names: [SourceName!]!
 }
 
 type SourceName {
+  id: ID!
   name: String!
   tag: String
   commit: String
@@ -38,12 +45,14 @@ type SourceName {
 }
 
 type HasSourceAt {
+  id: ID!
   package: Package!
   source: Source!
   justification: String!
 }
 
 input PackageFilter {
+  id: ID
   type: String
   namespace: String
   name: String
@@ -52,6 +61,7 @@ input PackageFilter {
 }
 
 input SourceFilter {
+  id: ID
   type: String
   namespace: String
   name: String
@@ -60,6 +70,7 @@ input SourceFilter {
 }
 
 input HasSourceAtFilter {
+  id: ID
   package: PackageFilter
   source: SourceFilter
   justification: String

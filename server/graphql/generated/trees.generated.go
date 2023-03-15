@@ -23,6 +23,9 @@ type MutationResolver interface {
 	IngestSource(ctx context.Context, input model.SourceInput) (*model.Source, error)
 	IngestSourceAt(ctx context.Context, packageArg model.PackageInput, source model.SourceInput, input model.HasSourceAtInput) (*model.HasSourceAt, error)
 }
+type PackageVersionResolver interface {
+	Source(ctx context.Context, obj *model.PackageVersion) (*model.Source, error)
+}
 type QueryResolver interface {
 	Packages(ctx context.Context, filter model.PackageFilter) ([]*model.Package, error)
 	Sources(ctx context.Context, filter model.SourceFilter) ([]*model.Source, error)
@@ -164,6 +167,50 @@ func (ec *executionContext) field_Query_sources_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
+func (ec *executionContext) _HasSourceAt_id(ctx context.Context, field graphql.CollectedField, obj *model.HasSourceAt) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_HasSourceAt_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_HasSourceAt_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "HasSourceAt",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _HasSourceAt_package(ctx context.Context, field graphql.CollectedField, obj *model.HasSourceAt) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_HasSourceAt_package(ctx, field)
 	if err != nil {
@@ -203,6 +250,8 @@ func (ec *executionContext) fieldContext_HasSourceAt_package(ctx context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Package_id(ctx, field)
 			case "type":
 				return ec.fieldContext_Package_type(ctx, field)
 			case "namespaces":
@@ -253,6 +302,8 @@ func (ec *executionContext) fieldContext_HasSourceAt_source(ctx context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Source_id(ctx, field)
 			case "type":
 				return ec.fieldContext_Source_type(ctx, field)
 			case "namespaces":
@@ -347,6 +398,8 @@ func (ec *executionContext) fieldContext_Mutation_ingestPackage(ctx context.Cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Package_id(ctx, field)
 			case "type":
 				return ec.fieldContext_Package_type(ctx, field)
 			case "namespaces":
@@ -408,6 +461,8 @@ func (ec *executionContext) fieldContext_Mutation_ingestSource(ctx context.Conte
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Source_id(ctx, field)
 			case "type":
 				return ec.fieldContext_Source_type(ctx, field)
 			case "namespaces":
@@ -469,6 +524,8 @@ func (ec *executionContext) fieldContext_Mutation_ingestSourceAt(ctx context.Con
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_HasSourceAt_id(ctx, field)
 			case "package":
 				return ec.fieldContext_HasSourceAt_package(ctx, field)
 			case "source":
@@ -489,6 +546,50 @@ func (ec *executionContext) fieldContext_Mutation_ingestSourceAt(ctx context.Con
 	if fc.Args, err = ec.field_Mutation_ingestSourceAt_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Package_id(ctx context.Context, field graphql.CollectedField, obj *model.Package) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Package_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Package_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Package",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
 	}
 	return fc, nil
 }
@@ -576,12 +677,58 @@ func (ec *executionContext) fieldContext_Package_namespaces(ctx context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_PackageNamespace_id(ctx, field)
 			case "namespace":
 				return ec.fieldContext_PackageNamespace_namespace(ctx, field)
 			case "names":
 				return ec.fieldContext_PackageNamespace_names(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PackageNamespace", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageName_id(ctx context.Context, field graphql.CollectedField, obj *model.PackageName) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PackageName_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PackageName_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageName",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -670,6 +817,8 @@ func (ec *executionContext) fieldContext_PackageName_versions(ctx context.Contex
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_PackageVersion_id(ctx, field)
 			case "version":
 				return ec.fieldContext_PackageVersion_version(ctx, field)
 			case "subpath":
@@ -719,12 +868,58 @@ func (ec *executionContext) fieldContext_PackageName_source(ctx context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Source_id(ctx, field)
 			case "type":
 				return ec.fieldContext_Source_type(ctx, field)
 			case "namespaces":
 				return ec.fieldContext_Source_namespaces(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Source", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageNamespace_id(ctx context.Context, field graphql.CollectedField, obj *model.PackageNamespace) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PackageNamespace_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PackageNamespace_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageNamespace",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -813,6 +1008,8 @@ func (ec *executionContext) fieldContext_PackageNamespace_names(ctx context.Cont
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_PackageName_id(ctx, field)
 			case "name":
 				return ec.fieldContext_PackageName_name(ctx, field)
 			case "versions":
@@ -821,6 +1018,50 @@ func (ec *executionContext) fieldContext_PackageNamespace_names(ctx context.Cont
 				return ec.fieldContext_PackageName_source(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PackageName", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PackageVersion_id(ctx context.Context, field graphql.CollectedField, obj *model.PackageVersion) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PackageVersion_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PackageVersion_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PackageVersion",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -928,7 +1169,7 @@ func (ec *executionContext) _PackageVersion_source(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Source, nil
+		return ec.resolvers.PackageVersion().Source(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -946,10 +1187,12 @@ func (ec *executionContext) fieldContext_PackageVersion_source(ctx context.Conte
 	fc = &graphql.FieldContext{
 		Object:     "PackageVersion",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Source_id(ctx, field)
 			case "type":
 				return ec.fieldContext_Source_type(ctx, field)
 			case "namespaces":
@@ -1000,6 +1243,8 @@ func (ec *executionContext) fieldContext_Query_packages(ctx context.Context, fie
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Package_id(ctx, field)
 			case "type":
 				return ec.fieldContext_Package_type(ctx, field)
 			case "namespaces":
@@ -1061,6 +1306,8 @@ func (ec *executionContext) fieldContext_Query_sources(ctx context.Context, fiel
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Source_id(ctx, field)
 			case "type":
 				return ec.fieldContext_Source_type(ctx, field)
 			case "namespaces":
@@ -1122,6 +1369,8 @@ func (ec *executionContext) fieldContext_Query_sourceMap(ctx context.Context, fi
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_HasSourceAt_id(ctx, field)
 			case "package":
 				return ec.fieldContext_HasSourceAt_package(ctx, field)
 			case "source":
@@ -1275,6 +1524,50 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _Source_id(ctx context.Context, field graphql.CollectedField, obj *model.Source) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Source_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Source_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Source",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Source_type(ctx context.Context, field graphql.CollectedField, obj *model.Source) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Source_type(ctx, field)
 	if err != nil {
@@ -1358,12 +1651,58 @@ func (ec *executionContext) fieldContext_Source_namespaces(ctx context.Context, 
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_SourceNamespace_id(ctx, field)
 			case "namespace":
 				return ec.fieldContext_SourceNamespace_namespace(ctx, field)
 			case "names":
 				return ec.fieldContext_SourceNamespace_names(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type SourceNamespace", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SourceName_id(ctx context.Context, field graphql.CollectedField, obj *model.SourceName) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SourceName_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SourceName_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SourceName",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1531,12 +1870,58 @@ func (ec *executionContext) fieldContext_SourceName_package(ctx context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Package_id(ctx, field)
 			case "type":
 				return ec.fieldContext_Package_type(ctx, field)
 			case "namespaces":
 				return ec.fieldContext_Package_namespaces(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Package", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SourceNamespace_id(ctx context.Context, field graphql.CollectedField, obj *model.SourceNamespace) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SourceNamespace_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SourceNamespace_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SourceNamespace",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1625,6 +2010,8 @@ func (ec *executionContext) fieldContext_SourceNamespace_names(ctx context.Conte
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_SourceName_id(ctx, field)
 			case "name":
 				return ec.fieldContext_SourceName_name(ctx, field)
 			case "tag":
@@ -1651,13 +2038,21 @@ func (ec *executionContext) unmarshalInputHasSourceAtFilter(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"package", "source", "justification"}
+	fieldsInOrder := [...]string{"id", "package", "source", "justification"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
+		case "id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			it.ID, err = ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "package":
 			var err error
 
@@ -1723,13 +2118,21 @@ func (ec *executionContext) unmarshalInputPackageFilter(ctx context.Context, obj
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"type", "namespace", "name", "version", "subpath"}
+	fieldsInOrder := [...]string{"id", "type", "namespace", "name", "version", "subpath"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
+		case "id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			it.ID, err = ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "type":
 			var err error
 
@@ -1853,13 +2256,21 @@ func (ec *executionContext) unmarshalInputSourceFilter(ctx context.Context, obj 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"type", "namespace", "name", "tag", "commit"}
+	fieldsInOrder := [...]string{"id", "type", "namespace", "name", "tag", "commit"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
+		case "id":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			it.ID, err = ec.unmarshalOID2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
 		case "type":
 			var err error
 
@@ -1991,6 +2402,13 @@ func (ec *executionContext) _HasSourceAt(ctx context.Context, sel ast.SelectionS
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("HasSourceAt")
+		case "id":
+
+			out.Values[i] = ec._HasSourceAt_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "package":
 
 			out.Values[i] = ec._HasSourceAt_package(ctx, field, obj)
@@ -2090,6 +2508,13 @@ func (ec *executionContext) _Package(ctx context.Context, sel ast.SelectionSet, 
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Package")
+		case "id":
+
+			out.Values[i] = ec._Package_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "type":
 
 			out.Values[i] = ec._Package_type(ctx, field, obj)
@@ -2125,6 +2550,13 @@ func (ec *executionContext) _PackageName(ctx context.Context, sel ast.SelectionS
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("PackageName")
+		case "id":
+
+			out.Values[i] = ec._PackageName_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "name":
 
 			out.Values[i] = ec._PackageName_name(ctx, field, obj)
@@ -2164,6 +2596,13 @@ func (ec *executionContext) _PackageNamespace(ctx context.Context, sel ast.Selec
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("PackageNamespace")
+		case "id":
+
+			out.Values[i] = ec._PackageNamespace_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "namespace":
 
 			out.Values[i] = ec._PackageNamespace_namespace(ctx, field, obj)
@@ -2199,24 +2638,44 @@ func (ec *executionContext) _PackageVersion(ctx context.Context, sel ast.Selecti
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("PackageVersion")
+		case "id":
+
+			out.Values[i] = ec._PackageVersion_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&invalids, 1)
+			}
 		case "version":
 
 			out.Values[i] = ec._PackageVersion_version(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "subpath":
 
 			out.Values[i] = ec._PackageVersion_subpath(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
-				invalids++
+				atomic.AddUint32(&invalids, 1)
 			}
 		case "source":
+			field := field
 
-			out.Values[i] = ec._PackageVersion_source(ctx, field, obj)
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._PackageVersion_source(ctx, field, obj)
+				return res
+			}
 
+			out.Concurrently(i, func() graphql.Marshaler {
+				return innerFunc(ctx)
+
+			})
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -2349,6 +2808,13 @@ func (ec *executionContext) _Source(ctx context.Context, sel ast.SelectionSet, o
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Source")
+		case "id":
+
+			out.Values[i] = ec._Source_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "type":
 
 			out.Values[i] = ec._Source_type(ctx, field, obj)
@@ -2384,6 +2850,13 @@ func (ec *executionContext) _SourceName(ctx context.Context, sel ast.SelectionSe
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("SourceName")
+		case "id":
+
+			out.Values[i] = ec._SourceName_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "name":
 
 			out.Values[i] = ec._SourceName_name(ctx, field, obj)
@@ -2424,6 +2897,13 @@ func (ec *executionContext) _SourceNamespace(ctx context.Context, sel ast.Select
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("SourceNamespace")
+		case "id":
+
+			out.Values[i] = ec._SourceNamespace_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "namespace":
 
 			out.Values[i] = ec._SourceNamespace_namespace(ctx, field, obj)

@@ -25,6 +25,11 @@ func (r *mutationResolver) IngestSourceAt(ctx context.Context, packageArg model.
 	return r.Backend.IngestSourceAt(ctx, packageArg, source, input)
 }
 
+// Source is the resolver for the source field.
+func (r *packageVersionResolver) Source(ctx context.Context, obj *model.PackageVersion) (*model.Source, error) {
+	return r.Backend.SourceFromPackageVersion(ctx, obj)
+}
+
 // Packages is the resolver for the packages field.
 func (r *queryResolver) Packages(ctx context.Context, filter model.PackageFilter) ([]*model.Package, error) {
 	return r.Backend.Packages(ctx, filter)
@@ -43,8 +48,14 @@ func (r *queryResolver) SourceMap(ctx context.Context, filter model.HasSourceAtF
 // Mutation returns generated.MutationResolver implementation.
 func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResolver{r} }
 
+// PackageVersion returns generated.PackageVersionResolver implementation.
+func (r *Resolver) PackageVersion() generated.PackageVersionResolver {
+	return &packageVersionResolver{r}
+}
+
 // Query returns generated.QueryResolver implementation.
 func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
+type packageVersionResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
