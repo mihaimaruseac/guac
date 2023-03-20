@@ -19,6 +19,8 @@ package main
 // development. Do not use in production!
 
 import (
+	"os"
+	"runtime/pprof"
 	"github.com/pkg/profile"
 
 	"github.com/guacsec/guac/cmd/graphql_playground/cmd"
@@ -26,5 +28,8 @@ import (
 
 func main() {
 	defer profile.Start(profile.ProfilePath(".")).Stop()
+	f, _ := os.Create("cpu.mmprof")
+	pprof.Lookup("allocs").WriteTo(f, 0)
+	f.Close()
 	cmd.Execute()
 }
